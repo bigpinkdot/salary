@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="근무기록">
+<title>근무기록</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  background:#111;color:#F2F2F7;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  max-width:430px;margin:0 auto;min-height:100vh;
+  padding-bottom:80px;
+  padding-top:env(safe-area-inset-top);
+}
+.topbar{padding:16px 18px 8px;}
+.topbar h1{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.segs{display:flex;gap:7px;padding:0 18px 12px;}
+.seg{display:flex;background:#1C1C1E;border-radius:9px;padding:3px;flex:1;}
+.seg-btn{flex:1;padding:7px 0;border:none;border-radius:6px;background:transparent;color:#8E8E93;font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+.seg-btn.on{background:#2C2C2E;color:#F2F2F7;}
+.mnav{display:flex;align-items:center;justify-content:space-between;padding:0 18px 10px;}
+.mnav button{background:#1C1C1E;border:none;color:#F2F2F7;width:34px;height:34px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mnav button:active{opacity:0.5;}
+.mnav .mt{font-size:19px;font-weight:700;}
+.cal{padding:0 10px;}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px;}
+.dow span{text-align:center;font-size:11px;font-weight:600;color:#8E8E93;padding:3px 0;}
+.dow span:first-child{color:rgba(255,69,58,0.7);}
+.dow span:last-child{color:rgba(94,139,255,0.7);}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+
+/* 날짜 셀 — React와 동일한 구조 */
+.dc{
+  height:52px;
+  border-radius:9px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  background:#1C1C1E;
+}
+.dc:active{opacity:0.7;}
+.dc.empty{background:transparent;cursor:default;pointer-events:none;}
+
+.dc .dn{font-size:13px;font-weight:700;line-height:1;color:#8E8E93;}
+.dc.sun .dn{color:rgba(255,69,58,0.45);}
+.dc.sat .dn{color:rgba(94,139,255,0.45);}
+.dc.tod .dn{
+  background:#F2F2F7;color:#111 !important;
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* 뱃지 — 항상 동일 높이 */
+.dc .db{
+  font-size:8px;font-weight:700;line-height:1;
+  margin-top:4px;
+  height:10px;
+  display:flex;align-items:center;justify-content:center;
+}
+
+.dc.sw{background:rgba(48,209,88,0.13);}  .dc.sw .dn{color:#30D158;}
+.dc.so{background:rgba(255,159,10,0.13);} .dc.so .dn{color:#FF9F0A;}
+.dc.ss{background:rgba(255,69,58,0.13);}  .dc.ss .dn{color:#FF453A;}
+
+.chips{display:flex;gap:6px;padding:10px 10px 0;overflow-x:auto;scrollbar-width:none;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0;display:flex;align-items:center;gap:5px;background:#1C1C1E;border-radius:20px;padding:7px 12px;font-size:12px;font-weight:600;color:#8E8E93;}
+.pcard{margin:14px 10px 0;background:#1C1C1E;border-radius:16px;overflow:hidden;}
+.ptop{padding:16px 18px 12px;border-bottom:1px solid #2C2C2E;}
+.plabel{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8E8E93;margin-bottom:5px;}
+.pamount{font-size:34px;font-weight:800;letter-spacing:-1.5px;}
+.pamount span{font-size:15px;font-weight:500;color:#8E8E93;margin-left:2px;}
+.pnote{font-size:11px;color:#8E8E93;margin-top:3px;}
+.prows{padding:2px 0;}
+.prow{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;font-size:13px;}
+.prow+.prow{border-top:1px solid #2C2C2E;}
+.prow .pl{color:#8E8E93;}
+.prow .pv{font-weight:700;}
+.sbg{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.18s;}
+.sbg.open{opacity:1;pointer-events:all;}
+.sheet{width:100%;max-width:430px;background:#1C1C1E;border-radius:22px 22px 0 0;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.32,0.72,0,1);padding-bottom:max(40px,env(safe-area-inset-bottom));}
+.sbg.open .sheet{transform:translateY(0);}
+.shandle{width:36px;height:4px;border-radius:2px;background:#2C2C2E;margin:12px auto 0;}
+.shead{padding:14px 20px 12px;border-bottom:1px solid #2C2C2E;}
+.shead .sd{font-size:18px;font-weight:700;}
+.shead .sdow{font-size:12px;color:#8E8E93;margin-top:2px;}
+.citems{padding:4px 0;}
+.ci{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;cursor:pointer;}
+.ci:active{background:rgba(255,255,255,0.03);}
+.ci+.ci{border-top:1px solid #2C2C2E;}
+.ci-l{display:flex;align-items:center;gap:12px;}
+.ci-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.ci-name{font-size:15px;font-weight:600;}
+.ci-sub{font-size:11px;color:#8E8E93;margin-top:2px;}
+.toggle{width:50px;height:30px;border-radius:15px;background:#2C2C2E;position:relative;transition:background 0.18s;flex-shrink:0;}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left 0.18s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+.toggle.g{background:#30D158;} .toggle.o{background:#FF9F0A;} .toggle.r{background:#FF453A;}
+.toggle.g::after,.toggle.o::after,.toggle.r::after{left:23px;}
+.sclose{margin:14px 20px 0;width:calc(100% - 40px);padding:15px;background:#2C2C2E;border:none;border-radius:14px;color:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#2C2C2E;color:#F2F2F7;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap;z-index:100;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="topbar"><h1>근무기록</h1></div>
+
+<div class="segs">
+  <div class="seg">
+    <button class="seg-btn on" onclick="setCfg('gender','male',this)">남자</button>
+    <button class="seg-btn" onclick="setCfg('gender','female',this)">여자</button>
+  </div>
+  <div class="seg">
+    <button class="seg-btn on" onclick="setCfg('prob','prob',this)">수습중</button>
+    <button class="seg-btn" onclick="setCfg('prob','full',this)">수습완료</button>
+  </div>
+</div>
+
+<div class="mnav">
+  <button onclick="changeMonth(-1)">‹</button>
+  <span class="mt" id="mt"></span>
+  <button onclick="changeMonth(1)">›</button>
+</div>
+
+<div class="cal">
+  <div class="dow"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+  <div class="cgrid" id="cgrid"></div>
+</div>
+
+<div class="chips">
+  <div class="chip" style="color:#30D158">출근 <b id="cW" style="color:#F2F2F7;margin-left:2px">0</b>일</div>
+  <div class="chip" style="color:#FF9F0A">잔업 <b id="cO" style="color:#F2F2F7;margin-left:2px">0</b>일</div>
+  <div class="chip" style="color:#FF453A">특근 <b id="cS" style="color:#F2F2F7;margin-left:2px">0</b>일</div>
+  <div class="chip">주휴 <b id="cWH" style="color:#F2F2F7;margin-left:2px">0</b>주</div>
+</div>
+
+<div class="pcard">
+  <div class="ptop">
+    <div style="display:flex;gap:16px;align-items:flex-end">
+      <div style="flex:1">
+        <div class="plabel">세전</div>
+        <div class="pamount" id="pamount">0<span>원</span></div>
+      </div>
+      <div style="flex:1;padding-bottom:3px">
+        <div class="plabel">세후 실수령</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-1px;color:#5E8BFF" id="pamountNet">0<span style="font-size:13px;font-weight:500;color:#8E8E93;margin-left:2px">원</span></div>
+      </div>
+    </div>
+    <div class="pnote" id="pnote"></div>
+  </div>
+  <div class="prows">
+    <div class="prow"><span class="pl">기본급</span><span class="pv" style="color:#30D158" id="pBase">—</span></div>
+    <div class="prow"><span class="pl">주휴수당</span><span class="pv" style="color:#30D158" id="pWeekly">—</span></div>
+    <div class="prow"><span class="pl">잔업수당 <small style="font-weight:400;opacity:.6">× 1.5 × 2.5h</small></span><span class="pv" style="color:#FF9F0A" id="pOT">—</span></div>
+    <div class="prow"><span class="pl">특근수당 <small style="font-weight:400;opacity:.6">× 1.5 × 8h</small></span><span class="pv" style="color:#FF453A" id="pSP">—</span></div>
+    <div class="prow"><span class="pl">4대보험 공제</span><span class="pv" style="color:#8E8E93" id="pInsurance">—</span></div>
+    <div class="prow"><span class="pl">소득세+지방세</span><span class="pv" style="color:#8E8E93" id="pTax">—</span></div>
+  </div>
+</div>
+
+<div class="sbg" id="sbg" onclick="bgTap(event)">
+  <div class="sheet">
+    <div class="shandle"></div>
+    <div class="shead">
+      <div class="sd" id="sd"></div>
+      <div class="sdow" id="sdow"></div>
+    </div>
+    <div class="citems">
+      <div class="ci" onclick="tog('work')">
+        <div class="ci-l">
+          <div class="ci-icon" style="background:rgba(48,209,88,0.13)">🟢</div>
+          <div><div class="ci-name">출근</div><div class="ci-sub">기본 8시간</div></div>
+        </div>
+        <div class="toggle" id="sw-work"></div>
+      </div>
+      <div class="ci" onclick="tog('ot')">
+        <div class="ci-l">
+          <div class="ci-icon" style="background:rgba(255,159,10,0.13)">🟠</div>
+          <div><div class="ci-name">잔업</div><div class="ci-sub">+2.5시간 고정</div></div>
+        </div>
+        <div class="toggle" id="sw-ot"></div>
+      </div>
+      <div class="ci" onclick="tog('special')">
+        <div class="ci-l">
+          <div class="ci-icon" style="background:rgba(255,69,58,0.13)">🔴</div>
+          <div><div class="ci-name">특근</div><div class="ci-sub">휴일 근무 (시급 × 1.5 × 8h)</div></div>
+        </div>
+        <div class="toggle" id="sw-special"></div>
+      </div>
+    </div>
+    <button class="sclose" onclick="closeSheet()">확인</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">저장됨 ✓</div>
+
+<script>
+const OT_H=2.5,BASE_H=8;
+const DOW_KR=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+const MON_KR=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const STORAGE_KEY='wage_v4';
+
+let cfg={gender:'male',prob:'prob'};
+let days={};
+let activeDate=null;
+const today=new Date();
+let cy=today.getFullYear(),cm=today.getMonth();
+
+const JUNE={
+  '2026-06-01':{work:true,ot:false,special:false},
+  '2026-06-02':{work:true,ot:true,special:false},
+  '2026-06-03':{work:true,ot:false,special:true},
+  '2026-06-04':{work:true,ot:true,special:false},
+  '2026-06-05':{work:true,ot:false,special:false},
+  '2026-06-08':{work:true,ot:true,special:false},
+  '2026-06-09':{work:true,ot:true,special:false},
+  '2026-06-10':{work:true,ot:true,special:false},
+  '2026-06-11':{work:true,ot:true,special:false},
+  '2026-06-12':{work:true,ot:false,special:false},
+  '2026-06-13':{work:true,ot:false,special:true},
+  '2026-06-15':{work:true,ot:true,special:false},
+  '2026-06-16':{work:true,ot:true,special:false},
+  '2026-06-17':{work:true,ot:false,special:false},
+  '2026-06-18':{work:true,ot:true,special:false},
+  '2026-06-19':{work:true,ot:false,special:false},
+  '2026-06-20':{work:true,ot:false,special:true},
+  '2026-06-22':{work:true,ot:true,special:false},
+  '2026-06-23':{work:true,ot:true,special:false},
+  '2026-06-24':{work:true,ot:true,special:false},
+  '2026-06-25':{work:true,ot:false,special:false},
+  '2026-06-26':{work:true,ot:false,special:false},
+  '2026-06-27':{work:true,ot:false,special:true},
+  '2026-06-29':{work:true,ot:true,special:false},
+  '2026-06-30':{work:true,ot:true,special:false},
+};
+
+function save(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({cfg,days}));
+  const t=document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const d=JSON.parse(raw);
+      if(d.cfg)cfg=d.cfg;
+      if(d.days)days=d.days;
+      restoreSegs();
+    }else{
+      days=JSON.parse(JSON.stringify(JUNE));
+      save();
+    }
+  }catch(e){days=JSON.parse(JSON.stringify(JUNE));}
+}
+function restoreSegs(){
+  document.querySelectorAll('.seg').forEach((seg,i)=>{
+    const key=i===0?'gender':'prob';
+    const match=key==='gender'?(cfg[key]==='male'?'남자':'여자'):(cfg[key]==='prob'?'수습중':'수습완료');
+    seg.querySelectorAll('.seg-btn').forEach(btn=>btn.classList.toggle('on',btn.textContent===match));
+  });
+}
+function hourly(){
+  if(cfg.prob==='prob')return 10350;
+  return cfg.gender==='male'?10500:10350;
+}
+
+function render(){
+  document.getElementById('mt').textContent=`${cy}년 ${MON_KR[cm]}`;
+  const grid=document.getElementById('cgrid');
+  grid.innerHTML='';
+  const firstDow=new Date(cy,cm,1).getDay();
+  const dim=new Date(cy,cm+1,0).getDate();
+
+  // 빈 셀 — React와 동일하게 같은 height, 같은 구조
+  for(let i=0;i<firstDow;i++){
+    const e=document.createElement('div');
+    e.className='dc empty';
+    e.innerHTML='<span class="dn" style="opacity:0">0</span><span class="db" style="color:transparent">ㅡ</span>';
+    grid.appendChild(e);
+  }
+
+  for(let d=1;d<=dim;d++){
+    const ds=`${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(cy,cm,d).getDay();
+    const info=days[ds]||{};
+    const isToday=cy===today.getFullYear()&&cm===today.getMonth()&&d===today.getDate();
+
+    let cls='dc';
+    if(dow===0)cls+=' sun';
+    if(dow===6)cls+=' sat';
+    if(isToday)cls+=' tod';
+    if(info.special)cls+=' ss';
+    else if(info.ot)cls+=' so';
+    else if(info.work)cls+=' sw';
+
+    const bt=info.special?'특근':info.ot?'잔업':info.work?'출근':'';
+    const bc=info.special?'#FF453A':info.ot?'#FF9F0A':info.work?'#30D158':'transparent';
+
+    const cell=document.createElement('div');
+    cell.className=cls;
+    // 뱃지 항상 같은 구조 — 빈 칸도 &nbsp; 로 높이 유지
+    cell.innerHTML=`<span class="dn">${d}</span><span class="db" style="color:${bc}">${bt||'&nbsp;'}</span>`;
+    cell.addEventListener('click',()=>openSheet(ds,d,dow));
+    grid.appendChild(cell);
+  }
+  calcPay();
+}
+
+function calcPay(){
+  const h=hourly();
+  const dim=new Date(cy,cm+1,0).getDate();
+  let wDays=0,otDays=0,spDays=0;
+  const wkMap={};
+  for(let d=1;d<=dim;d++){
+    const ds=`${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info=days[ds]||{};
+    const wk=weekKey(new Date(cy,cm,d));
+    if(!wkMap[wk])wkMap[wk]=0;
+    if(info.special){spDays++;wkMap[wk]+=BASE_H;}
+    else if(info.work){wDays++;wkMap[wk]+=BASE_H;if(info.ot)otDays++;}
+  }
+  const wc=Object.values(wkMap).filter(v=>v>=15).length;
+  const base=Math.round(h*BASE_H*wDays);
+  const weekly=Math.round(h*BASE_H*wc);
+  const ot=Math.round(h*1.5*OT_H*otDays);
+  const sp=Math.round(h*1.5*BASE_H*spDays);
+  const total=base+weekly+ot+sp;
+  // 4대보험 (근로자 부담분): 국민연금4.5% 건강보험3.545% 장기요양0.4591% 고용보험0.9%
+  const ins = Math.round(total * (0.045 + 0.03545 + 0.004591 + 0.009));
+  // 소득세 간이세액표 근사 (월급 기준, 부양가족 1인)
+  let incomeTax = 0;
+  if(total <= 1060000) incomeTax = 0;
+  else if(total <= 1500000) incomeTax = Math.round((total-1060000)*0.06*0.98);
+  else if(total <= 3000000) incomeTax = Math.round(26400+(total-1500000)*0.15*0.98);
+  else if(total <= 4500000) incomeTax = Math.round(246900+(total-3000000)*0.24*0.98);
+  else incomeTax = Math.round(606900+(total-4500000)*0.35*0.98);
+  const localTax = Math.round(incomeTax * 0.1);
+  const totalTax = ins + incomeTax + localTax;
+  const netTotal = total - totalTax;
+
+  document.getElementById('pamount').innerHTML=fmt(total)+'<span>원</span>';
+  document.getElementById('pamountNet').innerHTML=fmt(netTotal)+'<span style="font-size:13px;font-weight:500;color:#8E8E93;margin-left:2px">원</span>';
+  document.getElementById('pnote').textContent=`시급 ${fmt(h)}원 · 출근 ${wDays}일`;
+  document.getElementById('pBase').textContent=fmt(base)+'원';
+  document.getElementById('pWeekly').textContent=wc>0?`${fmt(weekly)}원 (${wc}주)`:'해당없음';
+  document.getElementById('pOT').textContent=otDays>0?`${fmt(ot)}원 (${otDays}일)`:'없음';
+  document.getElementById('pSP').textContent=spDays>0?`${fmt(sp)}원 (${spDays}일)`:'없음';
+  document.getElementById('pInsurance').textContent='-'+fmt(ins)+'원';
+  document.getElementById('pTax').textContent='-'+fmt(incomeTax+localTax)+'원';
+  document.getElementById('cW').textContent=wDays;
+  document.getElementById('cO').textContent=otDays;
+  document.getElementById('cS').textContent=spDays;
+  document.getElementById('cWH').textContent=wc;
+}
+
+function openSheet(ds,d,dow){
+  activeDate=ds;
+  const info=days[ds]||{};
+  document.getElementById('sd').textContent=`${cy}년 ${cm+1}월 ${d}일`;
+  document.getElementById('sdow').textContent=DOW_KR[dow];
+  setSw('work',!!info.work,'g');
+  setSw('ot',!!info.ot,'o');
+  setSw('special',!!info.special,'r');
+  document.getElementById('sbg').classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('sbg').classList.remove('open');
+  render();save();
+}
+function bgTap(e){if(e.target===document.getElementById('sbg'))closeSheet();}
+function tog(type){
+  if(!activeDate)return;
+  if(!days[activeDate])days[activeDate]={};
+  const info=days[activeDate];
+  if(type==='work'){
+    info.work=!info.work;
+    if(!info.work){info.ot=false;info.special=false;}
+  }else if(type==='ot'){
+    if(!info.ot){info.work=true;info.special=false;}
+    info.ot=!info.ot;
+  }else if(type==='special'){
+    if(!info.special){info.work=true;info.ot=false;}
+    info.special=!info.special;
+  }
+  if(!info.work&&!info.ot&&!info.special)delete days[activeDate];
+  const cur=days[activeDate]||{};
+  setSw('work',!!cur.work,'g');
+  setSw('ot',!!cur.ot,'o');
+  setSw('special',!!cur.special,'r');
+  calcPay();
+}
+function setSw(id,on,cls){
+  document.getElementById('sw-'+id).className='toggle'+(on?' '+cls:'');
+}
+function setCfg(key,val,el){
+  cfg[key]=val;
+  el.parentNode.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  calcPay();save();
+}
+function changeMonth(dir){
+  cm+=dir;if(cm>11){cm=0;cy++;}if(cm<0){cm=11;cy--;}render();
+}
+function weekKey(date){
+  const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+  const day=d.getUTCDay()||7;
+  d.setUTCDate(d.getUTCDate()+4-day);
+  const y1=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return `${d.getUTCFullYear()}-W${Math.ceil(((d-y1)/86400000+1)/7)}`;
+}
+function fmt(n){return n.toLocaleString('ko-KR');}
+
+load();render();
+</script>
+</body>
+</html>
